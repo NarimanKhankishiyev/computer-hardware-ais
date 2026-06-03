@@ -1,10 +1,12 @@
 const SUPABASE_URL = 'https://kpkcxzphwgdjlaflurbd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwa2N4enBod2dkamxhZmx1cmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzNjI0OTksImV4cCI6MjA2NDkzODQ5OX0.eL1idgvxucPrCUBfxwKEoMw_QLWHFCaW4_V0S36BwA0';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ИСПРАВЛЕНО: Для создания клиента используется глобальный объект библиотеки
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 1. Функция авторизации через всплывающее окно Google
 async function loginWithGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
             // Возвращаем пользователя на ту же страницу, где он находился
@@ -16,13 +18,13 @@ async function loginWithGoogle() {
 
 // Функция выхода из системы
 async function logout() {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     window.location.reload();
 }
 
 // 2. Проверка активной сессии пользователя при загрузке страницы
 async function checkUser() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     
     if (session) {
         const userEmail = session.user.email;
@@ -39,7 +41,7 @@ async function checkUser() {
             window.isAdmin = true; // Выставляем флаг для рендера кнопок удаления
         }
     }
-    // Загружаем товары из БД (сработает и для гостей, и для админа)
+    // Загружаем товары из БД (сработает и для гостей, и для admина)
     loadProducts();
 }
 
@@ -48,7 +50,7 @@ async function loadProducts() {
     const search = document.getElementById('searchInp').value;
     const category = document.getElementById('filterCat').value;
 
-    let query = supabase.from('products').select('*').order('id', { ascending: true });
+    let query = supabaseClient.from('products').select('*').order('id', { ascending: true });
 
     // Применяем фильтры, если они заполнены пользователем
     if (search) query = query.ilike('name', `%${search}%`);
@@ -97,7 +99,7 @@ async function addProduct() {
 
     if (!name || !price || !stock) return alert('Пожалуйста, заполните все поля карточки товара!');
 
-    const { error } = await supabase.from('products').insert([{ name, category, price, stock }]);
+    const { error } = await supabaseClient.from('products').insert([{ name, category, price, stock }]);
     
     if (error) {
         alert('Supabase RLS Ошибка: У вас нет прав на запись в базу! ' + error.message);
@@ -113,7 +115,7 @@ async function addProduct() {
 // 5. Удаление товара администратором
 async function deleteProduct(id) {
     if (confirm('Вы действительно хотите навсегда удалить этот товар с витрины?')) {
-        const { error } = await supabase.from('products').delete().eq('id', id);
+        const { error } = await supabaseClient.from('products').delete().eq('id', id);
         if (error) alert('Ошибка удаления: ' + error.message);
         loadProducts();
     }
