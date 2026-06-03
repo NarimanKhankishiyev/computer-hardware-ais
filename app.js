@@ -1,24 +1,23 @@
-const SUPABASE_URL = 'https://kpkcxzphwgdjlaflurbd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwa2N4enBod2dkamxhZmx1cmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzNjI0OTksImV4cCI6MjA2NDkzODQ5OX0.eL1idgvxucPrCUBfxwKEoMw_QLWHFCaW4_V0S36BwA0';
+const DB_URL = 'https://kpkcxzphwgdjlaflurbd.supabase.co';
+const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwa2N4enBod2dkamxhZmx1cmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzNjI0OTksImV4cCI6MjA2NDkzODQ5OX0.eL1idgvxucPrCUBfxwKEoMw_QLWHFCaW4_V0S36BwA0';
 
-// ИСПРАВЛЕНО: Для создания клиента используется глобальный объект библиотеки
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Вот эта строчка теперь железно создает нужный объект!
+const myStoreBackend = supabase.createClient(DB_URL, DB_KEY);
 
-// 1. Функция авторизации через всплывающее окно Google
+// 1. Авторизация через Google
 async function loginWithGoogle() {
-    const { error } = await supabaseClient.auth.signInWithOAuth({
+    const { error } = await myStoreBackend.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            // Возвращаем пользователя на ту же страницу, где он находился
             redirectTo: window.location.origin + window.location.pathname
         }
     });
     if (error) alert('Ошибка входа через Google: ' + error.message);
 }
 
-// Функция выхода из системы
+// Выход из системы
 async function logout() {
-    await supabaseClient.auth.signOut();
+    await myStoreBackend.auth.signOut();
     window.location.reload();
 }
 
@@ -27,7 +26,6 @@ async function checkUser() {
     const { data: { session } } = await myStoreBackend.auth.getSession();
     
     if (session) {
-        // .toLowerCase() принудительно переводит почту в нижний регистр для защиты от багов реестра
         const userEmail = session.user.email.toLowerCase();
         
         document.getElementById('authBlock').innerHTML = `
@@ -35,23 +33,21 @@ async function checkUser() {
             <button class="btn-danger" onclick="logout()">Выйти</button>
         `;
         
-        // Пишем строго маленькими буквами
         if (userEmail === '240350@turan-edu.kz') {
-            document.getElementById('adminPanel').style.display = 'block'; // ВКЛЮЧАЕТ ПАНЕЛЬ ДОБАВЛЕНИЯ
-            window.isAdmin = true; // ВКЛЮЧАЕТ КНОПКИ УДАЛЕНИЯ ТОВАРОВ
+            document.getElementById('adminPanel').style.display = 'block';
+            window.isAdmin = true;
         }
     }
     loadProducts();
 }
 
-// 3. Загрузка товаров на витрину (с фильтрацией и поиском)
+// 3. Вывод товаров на витрину
 async function loadProducts() {
     const search = document.getElementById('searchInp').value;
     const category = document.getElementById('filterCat').value;
 
-    let query = supabaseClient.from('products').select('*').order('id', { ascending: true });
+    let query = myStoreBackend.from('products').select('*').order('id', { ascending: true });
 
-    // Применяем фильтры, если они заполнены пользователем
     if (search) query = query.ilike('name', `%${search}%`);
     if (category) query = query.eq('category', category);
 
@@ -61,14 +57,12 @@ async function loadProducts() {
     const container = document.getElementById('productsDisplay');
     container.innerHTML = '';
 
-    // Если база пуста
     if (data.length === 0) {
         container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #64748b;">Товары не найдены</p>`;
         return;
     }
 
     data.forEach(p => {
-        // Кнопка удаления отображается только если вы авторизованы под своей почтой
         const deleteBtn = window.isAdmin 
             ? `<button class="btn-danger" onclick="deleteProduct(${p.id})" style="margin-top:12px; width:100%;">Удалить из магазина</button>` 
             : '';
@@ -82,14 +76,14 @@ async function loadProducts() {
                 </div>
                 <div>
                     <div class="price">${p.price.toLocaleString()} тг.</div>
-                    <button class="btn-primary" onclick="alert('Демо-покупка: Товар добавлен в корзину!')" style="width:100%;">Купить</button>
+                    <button class="btn-primary" onclick="alert('Товар добавлен в корзину!')" style="width:100%;">Купить</button>
                     ${deleteBtn}
                 </div>
             </div>`;
     });
 }
 
-// 4. Добавление нового товара администратором
+// 4. Добавление товара
 async function addProduct() {
     const name = document.getElementById('name').value;
     const category = document.getElementById('category').value;
@@ -98,27 +92,26 @@ async function addProduct() {
 
     if (!name || !price || !stock) return alert('Пожалуйста, заполните все поля карточки товара!');
 
-    const { error } = await supabaseClient.from('products').insert([{ name, category, price, stock }]);
+    const { error } = await myStoreBackend.from('products').insert([{ name, category, price, stock }]);
     
     if (error) {
-        alert('Supabase RLS Ошибка: У вас нет прав на запись в базу! ' + error.message);
+        alert('Ошибка RLS: ' + error.message);
     } else {
-        // Очищаем форму при успешном добавлении
         document.getElementById('name').value = '';
         document.getElementById('price').value = '';
         document.getElementById('stock').value = '';
-        loadProducts(); // Перезапускаем витрину
+        loadProducts();
     }
 }
 
-// 5. Удаление товара администратором
+// 5. Удаление товара
 async function deleteProduct(id) {
-    if (confirm('Вы действительно хотите навсегда удалить этот товар с витрины?')) {
-        const { error } = await supabaseClient.from('products').delete().eq('id', id);
+    if (confirm('Вы действительно хотите удалить этот товар?')) {
+        const { error } = await myStoreBackend.from('products').delete().eq('id', id);
         if (error) alert('Ошибка удаления: ' + error.message);
         loadProducts();
     }
 }
 
-// Запуск главной проверки при открытии сайта
+// Старт
 checkUser();
