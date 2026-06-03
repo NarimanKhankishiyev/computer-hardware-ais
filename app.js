@@ -1,12 +1,13 @@
-// 1. Сюда вставляем ТОЛЬКО веб-ссылку проекта
+// 1. Адрес базы данных (СТРОГО С ССЫЛКОЙ HTTPS)
 const DB_URL = 'https://kpkcxzphwgdjlaflurbd.supabase.co';
 
-// 2. Сюда вставляем ваш НОВЫЙ ключ, который вы скопировали
+// 2. Публичный ключ (СТРОГО С КЛЮЧОМ, НАЧИНАЮЩИМСЯ НА sb_publishable)
 const DB_KEY = 'sb_publishable_e1idgvxucPrCUbfxwKEoMw_QLWHFsIc';
-// Вот эта строчка теперь железно создает нужный объект!
+
+// Создаем подключение
 const myStoreBackend = supabase.createClient(DB_URL, DB_KEY);
 
-// 1. Авторизация через Google
+// 1. Функция авторизации через всплывающее окно Google
 async function loginWithGoogle() {
     const { error } = await myStoreBackend.auth.signInWithOAuth({
         provider: 'google',
@@ -17,33 +18,36 @@ async function loginWithGoogle() {
     if (error) alert('Ошибка входа через Google: ' + error.message);
 }
 
-// Выход из системы
+// Функция выхода из системы
 async function logout() {
     await myStoreBackend.auth.signOut();
     window.location.reload();
 }
 
-// 2. Проверка активной сессии
+// 2. Проверка активной сессии пользователя при загрузке страницы
 async function checkUser() {
     const { data: { session } } = await myStoreBackend.auth.getSession();
     
     if (session) {
         const userEmail = session.user.email.toLowerCase();
         
+        // Меняем кнопку входа на имя администратора и кнопку выхода
         document.getElementById('authBlock').innerHTML = `
             <span style="margin-right: 15px; font-weight: bold; color: #475569;">Администратор: ${userEmail}</span>
             <button class="btn-danger" onclick="logout()">Выйти</button>
         `;
         
+        // Сверяем вошедший аккаунт с вашей почтой
         if (userEmail === '240350@turan-edu.kz') {
-            document.getElementById('adminPanel').style.display = 'block';
-            window.isAdmin = true;
+            document.getElementById('adminPanel').style.display = 'block'; // Показываем форму добавления
+            window.isAdmin = true; // Выставляем флаг для рендера кнопок удаления
         }
     }
+    // Загружаем товары из БД
     loadProducts();
 }
 
-// 3. Вывод товаров на витрину
+// 3. Загрузка товаров на витрину (с фильтрацией и поиском)
 async function loadProducts() {
     const search = document.getElementById('searchInp').value;
     const category = document.getElementById('filterCat').value;
@@ -78,14 +82,14 @@ async function loadProducts() {
                 </div>
                 <div>
                     <div class="price">${p.price.toLocaleString()} тг.</div>
-                    <button class="btn-primary" onclick="alert('Товар добавлен в корзину!')" style="width:100%;">Купить</button>
+                    <button class="btn-primary" onclick="alert('Демо-покупка: Товар добавлен в корзину!')" style="width:100%;">Купить</button>
                     ${deleteBtn}
                 </div>
             </div>`;
     });
 }
 
-// 4. Добавление товара
+// 4. Добавление нового товара администратором
 async function addProduct() {
     const name = document.getElementById('name').value;
     const category = document.getElementById('category').value;
@@ -97,23 +101,23 @@ async function addProduct() {
     const { error } = await myStoreBackend.from('products').insert([{ name, category, price, stock }]);
     
     if (error) {
-        alert('Ошибка RLS: ' + error.message);
+        alert('Supabase Ошибка: ' + error.message);
     } else {
         document.getElementById('name').value = '';
         document.getElementById('price').value = '';
         document.getElementById('stock').value = '';
-        loadProducts();
+        loadProducts(); // Перезапускаем витрину
     }
 }
 
-// 5. Удаление товара
+// 5. Удаление товара администратором
 async function deleteProduct(id) {
-    if (confirm('Вы действительно хотите удалить этот товар?')) {
+    if (confirm('Вы действительно хотите навсегда удалить этот товар с витрины?')) {
         const { error } = await myStoreBackend.from('products').delete().eq('id', id);
         if (error) alert('Ошибка удаления: ' + error.message);
         loadProducts();
     }
 }
 
-// Старт
+// Запуск главной проверки при открытии сайта
 checkUser();
