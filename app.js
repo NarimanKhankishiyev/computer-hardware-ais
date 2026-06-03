@@ -22,26 +22,25 @@ async function logout() {
     window.location.reload();
 }
 
-// 2. Проверка активной сессии пользователя при загрузке страницы
+// 2. Проверка активной сессии
 async function checkUser() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { session } } = await myStoreBackend.auth.getSession();
     
     if (session) {
-        const userEmail = session.user.email;
+        // .toLowerCase() принудительно переводит почту в нижний регистр для защиты от багов реестра
+        const userEmail = session.user.email.toLowerCase();
         
-        // Меняем кнопку входа на имя администратора и кнопку выхода
         document.getElementById('authBlock').innerHTML = `
             <span style="margin-right: 15px; font-weight: bold; color: #475569;">Администратор: ${userEmail}</span>
             <button class="btn-danger" onclick="logout()">Выйти</button>
         `;
         
-        // Сверяем вошедший аккаунт с вашим e-mail
+        // Пишем строго маленькими буквами
         if (userEmail === '240350@turan-edu.kz') {
-            document.getElementById('adminPanel').style.display = 'block'; // Показываем форму добавления
-            window.isAdmin = true; // Выставляем флаг для рендера кнопок удаления
+            document.getElementById('adminPanel').style.display = 'block'; // ВКЛЮЧАЕТ ПАНЕЛЬ ДОБАВЛЕНИЯ
+            window.isAdmin = true; // ВКЛЮЧАЕТ КНОПКИ УДАЛЕНИЯ ТОВАРОВ
         }
     }
-    // Загружаем товары из БД (сработает и для гостей, и для admина)
     loadProducts();
 }
 
