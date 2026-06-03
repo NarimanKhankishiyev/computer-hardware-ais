@@ -1,4 +1,4 @@
-const DB_URL = 'sb_publishable_e1idgvxucPrCUbfxwKEoMw_QLWHFsIc';
+const DB_URL = 'https://kpkcxzphwgdjlaflurbd.supabase.co';
 const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwa2N4enBod2dkamxhZmx1cmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDQzMTEsImV4cCI6MjA5NjA4MDMxMX0.WPYaVIHDKkjyi2QhY2FEDRa4PIifreB-DmssjPYFM8o';
 
 // Вот эта строчка теперь железно создает нужный объект!
